@@ -48,6 +48,7 @@ DATASETS = {
 
 SYNTHETIC_DATASETS = list(DATASETS.keys())
 ALGORITHMS = ["pie", "epie", "rpie", "mpie", "dm", "lsqml", "bh", "ad_ptycho"]
+ALGORITHMS = ["pie", "dm", "lsqml", "bh", "ad_ptycho"]
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MONITOR_SCRIPT = (
     Path("/home/zhong.zheng/PtychoPINN") / "scripts" / "monitor_gpu_power.py"
@@ -487,14 +488,14 @@ def detect_gpu_label(args) -> tuple[str, str]:
     return vendor, safe_name("_".join(unique_names))
 
 
-def run_modeling_one(args, dataset: str, algorithm: str, run_dir: Path) -> dict[str, object]:
-    run_name = f"{algorithm}_e{args.epochs}_bs{args.batch_size}"
-    dataset_dir = run_dir / safe_name(dataset)
-    dataset_dir.mkdir(parents=True, exist_ok=True)
+def run_modeling_one(args, dataset: str, algorithm: str, epoch: int, run_dir: Path) -> dict[str, object]:
+    run_name = f"e{epoch}_bs{args.batch_size}"
+    algorithm_dir = run_dir / safe_name(dataset) / safe_name(algorithm)
+    algorithm_dir.mkdir(parents=True, exist_ok=True)
 
-    log_file = dataset_dir / f"{run_name}.log"
-    power_csv = dataset_dir / f"{run_name}_power.csv"
-    label = f"{dataset}_{run_name}"
+    log_file = algorithm_dir / f"{run_name}.log"
+    power_csv = algorithm_dir / f"{run_name}_power.csv"
+    label = f"{dataset}_{algorithm}_{run_name}"
 
     ptychi_cmd = [
         sys.executable,
@@ -508,7 +509,7 @@ def run_modeling_one(args, dataset: str, algorithm: str, run_dir: Path) -> dict[
         "--device",
         args.device,
         "--epochs",
-        str(args.epochs),
+        str(epoch),
         "--batch-size",
         str(args.batch_size),
         "--extra-object-pixels",
@@ -562,7 +563,7 @@ def run_modeling_one(args, dataset: str, algorithm: str, run_dir: Path) -> dict[
     returncode = 1
     print(
         "Running pty-chi: "
-        f"dataset={dataset}, algorithm={algorithm}, epochs={args.epochs}, "
+        f"dataset={dataset}, algorithm={algorithm}, epochs={epoch}, "
         f"batch_size={args.batch_size}, device={args.device}",
         flush=True,
     )
@@ -585,7 +586,7 @@ def run_modeling_one(args, dataset: str, algorithm: str, run_dir: Path) -> dict[
     row = {
         "dataset": dataset,
         "algorithm": algorithm,
-        "epochs": args.epochs,
+        "epochs": epoch,
         "batch_size": args.batch_size,
         "device": args.device,
         "vendor": args.vendor,
@@ -606,7 +607,7 @@ def run_modeling() -> int:
     parser.add_argument("--modeling", action="store_true")
     parser.add_argument("--datasets", nargs="+", default=["R1000"])
     parser.add_argument("--algorithms", nargs="+", default=["epie"])
-    parser.add_argument("--epochs", type=int, default=100)
+    parser.add_argument("--epochs", nargs="+", type=int, default=[100])
     parser.add_argument("--batch-size", type=int, default=1000)
     parser.add_argument("--data-root", type=Path, default=Path("data"))
     parser.add_argument("--device", default="cuda", choices=("cpu", "cuda", "xpu"))
@@ -638,10 +639,11 @@ def run_modeling() -> int:
 
     for dataset in args.datasets:
         for algorithm in args.algorithms:
-            row = run_modeling_one(args, dataset, algorithm, run_dir)
-            if row["returncode"] != 0 and not args.continue_on_error:
-                print(f"Stopping after failed run: {row}", file=sys.stderr)
-                return int(row["returncode"])
+            for epoch in args.epochs:
+                row = run_modeling_one(args, dataset, algorithm, epoch, run_dir)
+                if row["returncode"] != 0 and not args.continue_on_error:
+                    print(f"Stopping after failed run: {row}", file=sys.stderr)
+                    return int(row["returncode"])
 
     return 0
 

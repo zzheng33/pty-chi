@@ -165,7 +165,7 @@ class Object(dsbase.ReconstructParameter):
         Tensor
             A (n_slices, h', w') tensor of the object in the ROI.
         """
-        return self.data[..., *bbox.get_slicer()]
+        return self.data[(Ellipsis, *bbox.get_slicer())]
     
 
 class PlanarObject(Object):
@@ -564,12 +564,12 @@ class PlanarObject(Object):
         """
         bbox = self.roi_bbox.get_bbox_with_top_left_origin()
         roi_slicer = bbox.get_slicer()
-        w = self.preconditioner[*roi_slicer]
+        w = self.preconditioner[roi_slicer]
         w = w / pmath.mnorm(w, dim=(-2, -1))
         
         # Get the norm of the object within the ROI for each slice.
         obj_data = self.data
-        obj_norm = torch.sqrt(torch.mean(torch.abs(obj_data[..., *roi_slicer]) ** 2 * w, dim=(-2, -1)))
+        obj_norm = torch.sqrt(torch.mean(torch.abs(obj_data[(Ellipsis, *roi_slicer)]) ** 2 * w, dim=(-2, -1)))
         
         # Scale the object such that the mean transmission is 1.
         obj_data = obj_data / obj_norm[:, None, None]

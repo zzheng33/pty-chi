@@ -19,6 +19,7 @@ import ptychi.data_structures.object as object
 import ptychi.data_structures.opr_mode_weights as oprweights
 import ptychi.maps as maps
 import ptychi.api.enums as enums
+from ptychi._compat import StrEnum
 
 if TYPE_CHECKING:
     import ptychi.api as api
@@ -26,7 +27,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class ProbeRepresentation(enum.StrEnum):
+class ProbeRepresentation(StrEnum):
     NORMAL = enum.auto()
     SPARSE_CODE = enum.auto()
     DIP = enum.auto()

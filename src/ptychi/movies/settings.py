@@ -2,9 +2,11 @@
 # Full license accessible at https://github.com//AdvancedPhotonSource/pty-chi/blob/main/LICENSE
 
 import dataclasses
-from enum import StrEnum, auto
+from enum import auto
 from typing import Sequence, Optional
 import cv2
+
+from ptychi._compat import StrEnum
 
 
 class MovieFileTypes(StrEnum):

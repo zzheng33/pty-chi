@@ -1514,12 +1514,12 @@ def vignette(
         if method == "gaussian":
             mask = torch.zeros(mask_shape, device=img.device)
             mask_slicer = [slice(None)] * i_dim + [slice(margin, None)]
-            mask[*mask_slicer] = 1.0
+            mask[tuple(mask_slicer)] = 1.0
             gauss_win = torch.signal.windows.gaussian(margin // 2, std=sigma, device=img.device)
             gauss_win = gauss_win / torch.sum(gauss_win)
             mask = convolve1d(mask, gauss_win, dim=i_dim, padding="same")
             mask_final_slicer = [slice(None)] * i_dim + [slice(len(gauss_win), len(gauss_win) + margin)]
-            mask = mask[*mask_final_slicer]
+            mask = mask[tuple(mask_final_slicer)]
             mask = torch.where(mask < 1e-3, 0, mask)
         elif method == "linear":
             ramp = torch.linspace(0, 1, margin)

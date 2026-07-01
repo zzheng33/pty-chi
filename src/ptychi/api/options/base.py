@@ -16,6 +16,7 @@ import numpy as np
 
 import ptychi.api.enums as enums
 import ptychi.utils as utils
+from ptychi._compat import StrEnum
 
 if TYPE_CHECKING:
     import ptychi.api.options.task as task_options
@@ -70,7 +71,7 @@ class Options:
             field_type = self.resolve_type(self.get_field_type(k))
             if isinstance(field_type, type) and issubclass(field_type, Options):
                 self.__setattr__(k, self.resolve_type(self.get_field_type(k))().load_from_dict(v))
-            elif isinstance(field_type, type) and issubclass(field_type, enum.StrEnum) and isinstance(v, str):
+            elif isinstance(field_type, type) and issubclass(field_type, StrEnum) and isinstance(v, str):
                 self.__setattr__(k, field_type(v))
             else:
                 self.__setattr__(k, v)

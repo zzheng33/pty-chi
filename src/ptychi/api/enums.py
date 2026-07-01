@@ -1,7 +1,9 @@
 # Copyright © 2025 UChicago Argonne, LLC All right reserved
 # Full license accessible at https://github.com//AdvancedPhotonSource/pty-chi/blob/main/LICENSE
 
-from enum import StrEnum, auto
+from enum import auto
+
+from ptychi._compat import StrEnum
 
 
 class BatchingModes(StrEnum):

@@ -77,9 +77,9 @@ class ComplexTensor(Module):
         data = torch.stack([data.real, data.imag], dim=-1)
         data = data.type(torch.get_default_dtype())
         if op == "add":
-            self.data[*slicer].copy_(self.data[*slicer] + to_tensor(data))
+            self.data[slicer].copy_(self.data[slicer] + to_tensor(data))
         else:
-            self.data[*slicer].copy_(to_tensor(data))
+            self.data[slicer].copy_(to_tensor(data))
 
 
 class ReconstructParameter(Module):
@@ -323,9 +323,9 @@ class ReconstructParameter(Module):
             self.tensor.set_data(data, slicer=slicer, op=op)
         else:
             if op == "add":
-                self.tensor[*slicer].copy_(self.data + to_tensor(data))
+                self.tensor[slicer].copy_(self.data + to_tensor(data))
             else:
-                self.tensor[*slicer].copy_(to_tensor(data))
+                self.tensor[slicer].copy_(to_tensor(data))
 
     def get_grad(self):
         if isinstance(self.tensor, ComplexTensor):
@@ -373,17 +373,17 @@ class ReconstructParameter(Module):
                 self.tensor.data.grad = grad
             else:
                 if op == "add":
-                    self.tensor.data.grad[*slicer, ..., :] += grad
+                    self.tensor.data.grad[(*slicer, Ellipsis, slice(None))] += grad
                 else:
-                    self.tensor.data.grad[*slicer, ..., :] = grad
+                    self.tensor.data.grad[(*slicer, Ellipsis, slice(None))] = grad
         else:
             if self.tensor.grad is None:
                 self.tensor.grad = grad
             else:
                 if op == "add":
-                    self.tensor.grad[*slicer] += grad
+                    self.tensor.grad[slicer] += grad
                 else:
-                    self.tensor.grad[*slicer] = grad
+                    self.tensor.grad[slicer] = grad
 
     def initialize_grad(self):
         """

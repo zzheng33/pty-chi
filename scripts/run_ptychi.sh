@@ -22,11 +22,11 @@ Notes:
   - Edit EPOCHS_LIST=(1 5 10) in this file to change the sweep.
 
 Outputs:
-  modeling_exp/<GPU>/<DATASET>/<ALGORITHM>_e<EPOCHS>_bs<BATCH>.log
-  modeling_exp/<GPU>/<DATASET>/<ALGORITHM>_e<EPOCHS>_bs<BATCH>_power.csv
+  modeling_exp/<GPU>/<DATASET>/<ALGORITHM>/e<EPOCHS>_bs<BATCH>.log
+  modeling_exp/<GPU>/<DATASET>/<ALGORITHM>/e<EPOCHS>_bs<BATCH>_power.csv
 
 Environment variables:
-  PYTHON_BIN              Python executable. Default: /home/zhong.zheng/miniforge3/envs/ptychi/bin/python
+  PYTHON_BIN              Python executable. Default: /home/zhong.zheng/miniforge3/envs/ptychopinn_torch/bin/python
   DATA_ROOT               Data root directory. Default: data
   BATCH_SIZE              Batch size. Default: 1000
   DEVICE_INDEX            GPU index for run and monitor. Default: 0
@@ -55,14 +55,14 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
 fi
 
 # Edit this list for epoch sweeps.
-EPOCHS_LIST=(1 5 10)
+EPOCHS_LIST=(1 2 4 6)
 
-DATASET="${1:-R1000}"
+DATASET="${1:-all}"
 EPOCHS_ARG="${2:-list}"
 DEVICE="${3:-cuda}"
-ALGORITHM="${4:-epie}"
+ALGORITHM="${4:-all}"
 
-PYTHON_BIN="${PYTHON_BIN:-/home/zhong.zheng/miniforge3/envs/ptychi/bin/python}"
+PYTHON_BIN="${PYTHON_BIN:-/home/zhong.zheng/miniforge3/envs/ptychopinn_torch/bin/python}"
 DATA_ROOT="${DATA_ROOT:-data}"
 BATCH_SIZE="${BATCH_SIZE:-1000}"
 DEVICE_INDEX="${DEVICE_INDEX:-0}"
@@ -78,6 +78,15 @@ if [[ ! -x "${PYTHON_BIN}" ]]; then
   echo "Python executable not found: ${PYTHON_BIN}" >&2
   exit 1
 fi
+if ! "${PYTHON_BIN}" --version >/dev/null 2>&1; then
+  echo "Python executable cannot run on this node: ${PYTHON_BIN}" >&2
+  echo "Node architecture: $(uname -m)" >&2
+  echo "If this is a GH200/Grace node, use an ARM/aarch64 Python environment, not the x86_64 ptychopinn_torch env." >&2
+  echo "Override with: PYTHON_BIN=/path/to/arm/env/bin/python scripts/run_ptychi.sh ..." >&2
+  exit 1
+fi
+
+export PYTHONPATH="${REPO_ROOT}/src${PYTHONPATH:+:${PYTHONPATH}}"
 
 if [[ "${EPOCHS_ARG}" == "list" || "${EPOCHS_ARG}" == "all" ]]; then
   SELECTED_EPOCHS=("${EPOCHS_LIST[@]}")
@@ -85,47 +94,45 @@ else
   SELECTED_EPOCHS=("${EPOCHS_ARG}")
 fi
 
-for epochs in "${SELECTED_EPOCHS[@]}"; do
-  CMD=(
-    "${PYTHON_BIN}" scripts/run_ptychi.py
-    --modeling
-    --datasets "${DATASET}"
-    --algorithms "${ALGORITHM}"
-    --epochs "${epochs}"
-    --batch-size "${BATCH_SIZE}"
-    --data-root "${DATA_ROOT}"
-    --device "${DEVICE}"
-    --vendor "${VENDOR}"
-    --devices "${DEVICE_INDEX}"
-    --interval "${INTERVAL}"
-    --output-root "${OUTPUT_ROOT}"
-    --monitor-script "${MONITOR_SCRIPT}"
-    --extra-object-pixels "${EXTRA_OBJECT_PIXELS}"
-    --object-step-size "${OBJECT_STEP_SIZE}"
-    --probe-step-size "${PROBE_STEP_SIZE}"
-  )
+CMD=(
+  "${PYTHON_BIN}" scripts/run_ptychi.py
+  --modeling
+  --datasets "${DATASET}"
+  --algorithms "${ALGORITHM}"
+  --epochs "${SELECTED_EPOCHS[@]}"
+  --batch-size "${BATCH_SIZE}"
+  --data-root "${DATA_ROOT}"
+  --device "${DEVICE}"
+  --vendor "${VENDOR}"
+  --devices "${DEVICE_INDEX}"
+  --interval "${INTERVAL}"
+  --output-root "${OUTPUT_ROOT}"
+  --monitor-script "${MONITOR_SCRIPT}"
+  --extra-object-pixels "${EXTRA_OBJECT_PIXELS}"
+  --object-step-size "${OBJECT_STEP_SIZE}"
+  --probe-step-size "${PROBE_STEP_SIZE}"
+)
 
-  if [[ -n "${GPU_LABEL:-}" ]]; then
-    CMD+=(--gpu-label "${GPU_LABEL}")
-  fi
-  if [[ "${TEST:-false}" == "true" ]]; then
-    CMD+=(--test)
-  fi
-  if [[ "${CONTINUE_ON_ERROR:-false}" == "true" ]]; then
-    CMD+=(--continue-on-error)
-  fi
-  if [[ "${DRY_RUN_PTYCHI:-false}" == "true" ]]; then
-    CMD+=(--dry-run-ptychi)
-  fi
-  if [[ "${FIXED_PROBE:-false}" == "true" ]]; then
-    CMD+=(--fixed-probe)
-  fi
-  if [[ "${NO_CENTER_POSITIONS:-false}" == "true" ]]; then
-    CMD+=(--no-center-positions)
-  fi
-  if [[ "${NO_PROBE_RESCALE:-false}" == "true" ]]; then
-    CMD+=(--no-probe-rescale)
-  fi
+if [[ -n "${GPU_LABEL:-}" ]]; then
+  CMD+=(--gpu-label "${GPU_LABEL}")
+fi
+if [[ "${TEST:-false}" == "true" ]]; then
+  CMD+=(--test)
+fi
+if [[ "${CONTINUE_ON_ERROR:-false}" == "true" ]]; then
+  CMD+=(--continue-on-error)
+fi
+if [[ "${DRY_RUN_PTYCHI:-false}" == "true" ]]; then
+  CMD+=(--dry-run-ptychi)
+fi
+if [[ "${FIXED_PROBE:-false}" == "true" ]]; then
+  CMD+=(--fixed-probe)
+fi
+if [[ "${NO_CENTER_POSITIONS:-false}" == "true" ]]; then
+  CMD+=(--no-center-positions)
+fi
+if [[ "${NO_PROBE_RESCALE:-false}" == "true" ]]; then
+  CMD+=(--no-probe-rescale)
+fi
 
-  "${CMD[@]}"
-done
+"${CMD[@]}"
